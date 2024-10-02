@@ -42,5 +42,38 @@ const login = async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
+const getUserInfo = async (req, res) => {
+  try {
+    const { id, role } = req.user;
+    const roleTableMap = {
+      student: { table: "students", idField: "s_id" },
+      faculty: { table: "faculty", idField: "f_id" },
+    };
 
-module.exports = { login };
+    if (!roleTableMap[role]) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const { table, idField } = roleTableMap[role];
+
+    const [userData] = await sequelize.query(
+      `SELECT ${idField} AS id, name, img_src 
+       FROM ${table} 
+       WHERE ${idField} = :id`,
+      { replacements: { id } }
+    );
+
+    if (!userData || userData.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ ...userData[0], role: role }); // Return the first result
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+module.exports = { login, getUserInfo };
