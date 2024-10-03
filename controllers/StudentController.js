@@ -1,5 +1,33 @@
 const sequelize = require("../config/connect.js");
+function generateAttendanceReport(data) {
+  // Initialize the report
+  const report = [];
 
+  // Loop through the enrolled courses
+  data.enrolled_courses.forEach((course) => {
+    const courseId = course.course_id;
+
+    // Filter attendance records for the specific course
+    const courseAttendance = data.attendace.filter(
+      (att) => att.c_id === courseId
+    );
+
+    // Count total classes and present classes
+    const totalClasses = courseAttendance.length;
+    const presentClasses = courseAttendance.filter(
+      (att) => att.isPresent === "1"
+    ).length;
+
+    // Add the course report to the final report array
+    report.push({
+      course_code: courseId,
+      total_classes: totalClasses,
+      present_classes: presentClasses,
+    });
+  });
+
+  return report;
+}
 const getStudent = async (req, res) => {
   try {
     const { id } = req.user;
@@ -49,7 +77,15 @@ const getStudent = async (req, res) => {
       })),
     };
 
-    return res.status(200).json(studentInfo);
+    const [StudentAttendanceData, metadata1] = await sequelize.query(
+      `SELECT * FROM attend_db.attendance_102024 where s_id = :s_id;`,
+      { replacements: { s_id: id } }
+    );
+    const attendace = generateAttendanceReport({
+      ...studentInfo,
+      attendace: StudentAttendanceData,
+    });
+    return res.status(200).json({ ...studentInfo, attendace: attendace });
   } catch (error) {
     console.error(error); // Log the error for debugging
     return res
@@ -58,4 +94,50 @@ const getStudent = async (req, res) => {
   }
 };
 
-module.exports = { getStudent };
+const getStudentAttendance = async (req, res) => {
+  try {
+    const { id } = req.user; // Student ID
+    const { sec_id, c_id } = req.body; // Section ID and Course ID
+
+    // First query: Fetch course details
+    const [courseData] = await sequelize.query(
+      `SELECT 
+        courses.name as course_name,
+        courses.c_id as course_id,
+        faculty.name as faculty_name
+      FROM 
+        attend_db.faculty
+      INNER JOIN 
+        attend_db.teaches ON faculty.f_id = teaches.f_id
+      INNER JOIN 
+        attend_db.courses ON teaches.c_id = courses.c_id
+      WHERE 
+        courses.c_id = '${c_id}';`
+    );
+
+    // Second query: Fetch attendance details for the student
+    const [attendanceData] = await sequelize.query(
+      `SELECT 
+        date, start, classroom, isPresent
+      FROM 
+        attend_db.attendance_102024
+      WHERE 
+        s_id = '${id}'
+        AND sec_id = '${sec_id}'
+        AND c_id = '${c_id}';` // Fixed the placeholder here
+    );
+
+    // Send the result as a response
+    return res
+      .status(200)
+      .json({ courseData: courseData[0], attendance: attendanceData });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { getStudent, getStudentAttendance };
