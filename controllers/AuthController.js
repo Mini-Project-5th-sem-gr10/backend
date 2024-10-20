@@ -4,28 +4,33 @@ const jwt = require("jsonwebtoken");
 
 const login = async (req, res) => {
   try {
-    const { s_id, password } = req.body;
+    const { id, password } = req.body;
 
     // Parameterized query to prevent SQL injection
     const [student, metadata] = await sequelize.query(
       `SELECT * FROM students WHERE s_id = :s_id`,
-      { replacements: { s_id } }
+      { replacements: { s_id: id } }
+    );
+    const [faculty, metadata1] = await sequelize.query(
+      `SELECT * FROM faculty WHERE f_id = :f_id`,
+      { replacements: { f_id: id } }
     );
 
-    if (!student.length) {
+    if (!student.length && !faculty.length) {
       return res.status(404).json({ message: "Student Doesn't Exist" });
     }
+    const role = student.length ? "student" : "faculty";
 
-    const studentData = student[0]; // Access the student data
+    const userData = student.length ? student[0] : faculty[0]; // Access the student data
 
-    const isMatch = await bcryptjs.compare(password, studentData.password);
+    const isMatch = await bcryptjs.compare(password, userData.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid Password" });
     }
 
     const payload = {
-      role: "student",
-      id: studentData.s_id,
+      role: role,
+      id,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -34,7 +39,7 @@ const login = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "Logged In Successfully", token: token });
+      .json({ message: "Logged In Successfully", token: token, role: role });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res

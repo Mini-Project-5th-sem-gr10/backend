@@ -96,8 +96,10 @@ const getStudent = async (req, res) => {
 
 const getStudentAttendance = async (req, res) => {
   try {
-    const { id } = req.user; // Student ID
+    const { id, role } = req.user; // Student ID
     const { sec_id, c_id } = req.body; // Section ID and Course ID
+
+    const studentid = role === "faculty" ? req.body.s_id : id;
 
     // First query: Fetch course details
     const [courseData] = await sequelize.query(
@@ -114,6 +116,9 @@ const getStudentAttendance = async (req, res) => {
       WHERE 
         courses.c_id = '${c_id}';`
     );
+    const [student_name] = await sequelize.query(`
+      SELECT name FROM students WHERE students.s_id = '${studentid}'
+      `);
 
     // Second query: Fetch attendance details for the student
     const [attendanceData] = await sequelize.query(
@@ -122,15 +127,17 @@ const getStudentAttendance = async (req, res) => {
       FROM 
         attend_db.attendance_102024
       WHERE 
-        s_id = '${id}'
+        s_id = '${studentid}'
         AND sec_id = '${sec_id}'
-        AND c_id = '${c_id}';` // Fixed the placeholder here
+        AND c_id = '${c_id}';`
     );
 
     // Send the result as a response
-    return res
-      .status(200)
-      .json({ courseData: courseData[0], attendance: attendanceData });
+    return res.status(200).json({
+      courseData: courseData[0],
+      attendance: attendanceData,
+      student_name: student_name[0].name,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
