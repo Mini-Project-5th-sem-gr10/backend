@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const StudentRouter = require("./routes/StudentsRoutes");
 const AuthRouter = require("./routes/AuthRoutes");
 const TeacherRouter = require("./routes/TeacherRoutes");
+const AttendanceRouter = require("./routes/AttendanceRoutes");
 const cors = require("cors");
 
 dotenv.config();
@@ -14,6 +15,7 @@ app.use(cors());
 
 app.use(StudentRouter);
 app.use(AuthRouter);
+app.use(AttendanceRouter);
 app.use(TeacherRouter);
 
 app.get("/", (req, res) => {
