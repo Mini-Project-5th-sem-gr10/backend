@@ -1,134 +1,174 @@
 # Node.js API Backend
 
-## About
+## Overview
 
-This repository houses the Node.js/Express.js API server, providing a RESTful interface for frontend-backend communication. It manages user authentication, attendance tracking, and data analytics, utilizing a MySQL Database.
+This repository provides the backend API for a face recognition-based attendance management system. Built with Node.js and Express.js, it handles user authentication, attendance tracking, and data analytics, utilizing MySQL for storage. The API supports student and faculty management with endpoints for login, attendance marking, and student data retrieval.
 
-This backend serves as a foundational API for managing student data, course enrollments, and authentication processes, designed to integrate with a frontend application. The project is continuously growing, with new routes and features added regularly.
+## Table of Contents
+
+- [Setup Instructions](#setup-instructions)
+- [Environment Variables](#environment-variables)
+- [API Routes](#api-routes)
+  - [Authentication Routes](#authentication-routes)
+  - [Student Routes](#student-routes)
+  - [Attendance Routes](#attendance-routes)
+
+---
 
 ## Setup Instructions
 
 ### 1. Clone the Repository
 
-To get started, clone the repository to your local machine:
-
 ```bash
 git clone https://github.com/Mini-Project-5th-sem-gr10/backend.git
+cd backend
 ```
 
 ### 2. Install Dependencies
 
-Navigate to the project directory and install all necessary packages using npm:
-
 ```bash
-cd backend
 npm install
 ```
 
 ### 3. Configure Environment Variables
 
-Ensure you have a `.env` file to configure database credentials and other environment-specific settings.
+Create a `.env` file in the root directory with the following variables:
 
-```bash
-DB_NAME=  enter your database name
-DB_USER=  enter your database username
-DB_PASSWORD=  enter your database password
-DB_HOST= enter your  database host
-DB_PORT= enter your  database port
-DB_DIALECT=  enter your database dialect
-PORT= port number
-JWT_SECRET=your_jwt_secret_key_here
+```plaintext
+DB_NAME=your_db_name
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_HOST=your_db_host
+DB_PORT=your_db_port
+PORT=5000
+JWT_SECRET=your_jwt_secret
 ```
 
 ### 4. Start the Server
-
-Run the following command to start the development server:
 
 ```bash
 npm start
 ```
 
-The API will be available on `http://localhost:<PORT>`.
+The API will be available at `http://localhost:5000`.
 
-## Routes Documentation
+---
+
+## API Routes
 
 ### Authentication Routes
 
-#### 1. Login Route
+#### 1. Login
 
-**Endpoint:** `/auth/login`
+- **Endpoint:** `/auth/login`
+- **Method:** `POST`
+- **Description:** Allows users to log in using their ID and password.
+- **Request Body:**
+  ```json
+  {
+    "id": "2024122043",
+    "password": "your_password"
+  }
+  ```
+- **Response:** Returns a JWT token if login is successful.
 
-**Method:** `POST`
+#### 2. Get User Info
 
-**Description:** This route allows a student to log in using their student ID (`s_id`) and password.
+- **Endpoint:** `/auth/getUser`
+- **Method:** `GET`
+- **Description:** Retrieves basic information about the logged-in user.
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Response:** Returns user details including ID, name, image source, and role.
 
-**Request Body:**
+### Student Routes
 
-```json
-{
-  "s_id": "2024122043",
-  "password": "your_password"
-}
-```
+#### 1. Get Student Data
 
-**Sample Response:**
+- **Endpoint:** `/getStudent`
+- **Method:** `GET`
+- **Description:** Fetches a student's details, including enrolled courses and faculty information.
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Response:** Student and course information.
 
-```json
-{
-  "message": "Logged In Successfully",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
+#### 2. Get Student Attendance
 
-**Headers:**
+- **Endpoint:** `/getStudentAttendance`
+- **Method:** `POST`
+- **Description:** Retrieves the attendance record for the student.
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Request Body:**
+  ```json
+  {
+    "s_id": "2024122043",
+    "c_id": "CAT301"
+  }
+  ```
+- **Response:** Detailed attendance report for the requested course.
 
-- No special headers required for this request.
+### Attendance Routes
 
-#### 2. Get Student Data Route
+#### 1. Mark Attendance
 
-**Endpoint:** `/getStudent`
-
-**Method:** `GET`
-
-**Description:** Fetches detailed information about a student, including enrolled courses and faculty data.
-
-**Authorization:** Requires a Bearer Token in the `Authorization` header.
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Sample Request Header:**
-
-```bash
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**Sample Response:**
-
-```json
-{
-  "s_id": 2024122043,
-  "student_name": "Prakhar Sanjeev Pande",
-  "roll_no": 43,
-  "sec_id": "AIML_S5B",
-  "student_img": "",
-  "enrolled_courses": [
+- **Endpoint:** `/attendance/mark`
+- **Method:** `POST`
+- **Description:** Marks attendance by processing uploaded images, identifying students, and recording attendance.
+- **Headers:**
+  - `Content-Type: multipart/form-data`
+- **Request Body:**
+  - **Form Data:** `images` (Array of JPEG/PNG images)
+  - **JSON Data:**
+    ```json
     {
-      "course_id": "CAP304",
-      "course_name": "Compiler Design Lab (CD Lab)",
-      "faculty_id": "20100004",
-      "faculty_name": "Dr. A. Agrawal",
-      "faculty_img": null
-    },
-    {
-      "course_id": "CAT304",
-      "course_name": "Compiler Design (CD)",
-      "faculty_id": "20100004",
-      "faculty_name": "Dr. A. Agrawal",
-      "faculty_img": null
+      "f_id": "20100001",
+      "sec_id": "AIML_S5B",
+      "c_id": "CAT301",
+      "classroom": "DT412",
+      "date": "2024-10-01",
+      "start": "10:00:00",
+      "duration": "1"
     }
-    // more enrolled courses...
-  ]
-}
-```
+    ```
+- **Response:** Confirms attendance marking and provides counts of present and absent students.
+
+#### 2. Edit Attendance
+
+- **Endpoint:** `/attendance/edit`
+- **Method:** `PUT`
+- **Description:** Edits attendance records for a specified session.
+- **Request Body:**
+  ```json
+  {
+    "s_id": "2024122001",
+    "f_id": "20100001",
+    "sec_id": "AIML_S5B",
+    "c_id": "CAT301",
+    "date": "2024-10-01",
+    "start": "10:00:00",
+    "isPresent": 1
+  }
+  ```
+- **Response:** Confirms if attendance update was successful.
+
+---
+
+## Error Handling
+
+Each route includes comprehensive error handling for:
+
+- Missing required fields.
+- Invalid file types or sizes for image uploads.
+- Record conflicts (e.g., duplicate attendance entries).
+- Unauthorized access due to missing or invalid tokens.
+
+## Contributing
+
+Contributions are welcome! If you have suggestions for improvements, feature requests, or discover any bugs, please feel free to open an issue. We also welcome pull requests for any enhancements or fixes.
+
+## License
+
+This project is licensed under the Apache License. For more details, refer to the [LICENSE](LICENSE) file.
+
+---

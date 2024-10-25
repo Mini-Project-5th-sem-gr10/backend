@@ -1,14 +1,14 @@
-// db.js
 const { Sequelize } = require("sequelize");
+require("dotenv").config();
 
 // Set up Sequelize connection
 const sequelize = new Sequelize(
-  "attend_db",
-  "avnadmin",
-  "AVNS_ap2zCLRl9cc1IZgZ85l",
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
   {
-    host: "mysql-56e2c29-attend-db.i.aivencloud.com",
-    port: 24685,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     dialect: "mysql",
   }
 );
